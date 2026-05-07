@@ -1,0 +1,218 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum IncidentType {
+  ACCIDENT
+  WORKS
+  CLOSURE
+  CAMERA
+  WEATHER
+}
+
+enum Priority {
+  HIGH
+  MED
+  LOW
+}
+
+enum IncidentStatus {
+  ACTIVE
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum IncidentEventKind {
+  CREATED
+  VERIFIED
+  DISPATCHED
+  ESCALATED
+  ACTION
+  RESOLVED
+  COMMENT
+}
+
+enum FeedTag {
+  EVENT
+  DISPATCH
+  CAMERA
+  INCIDENT
+  SENSOR
+  STATUS
+  WEATHER
+}
+
+enum ResponderKind {
+  DPS
+  AMBULANCE
+  TOW
+  INSPECTOR
+}
+
+enum ResponderStatus {
+  ACTIVE
+  EN_ROUTE
+  IDLE
+}
+
+enum TimeOfDay {
+  DAY
+  PEAK
+  NIGHT
+}
+
+model User {
+  id           String          @id @default(uuid()) @db.Uuid
+  email        String          @unique
+  passwordHash String
+  fullName     String
+  shift        String?
+  createdAt    DateTime        @default(now())
+  roles        UserRole[]
+  acknowledged Incident[]      @relation("AcknowledgedBy")
+  resolved     Incident[]      @relation("ResolvedBy")
+  events       IncidentEvent[]
+}
+
+model Role {
+  id          String     @id
+  description String
+  users       UserRole[]
+}
+
+model UserRole {
+  userId String @db.Uuid
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+}
+
+model District {
+  code      String       @id
+  name      String
+  lat       Float
+  lng       Float
+  score     Float        @default(4.5)
+  incidents Incident[]
+  cameras   Camera[]
+  jams      JamSegment[]
+}
+
+model Incident {
+  id             String              @id
+  type           IncidentType
+  priority       Priority
+  title          String
+  address        String
+  districtCode   String
+  district       District            @relation(fields: [districtCode], references: [code])
+  lat            Float
+  lng            Float
+  status         IncidentStatus      @default(ACTIVE)
+  reportedAt     DateTime            @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  acknowledgedBy String?             @db.Uuid
+  resolvedBy     String?             @db.Uuid
+  ackUser        User?               @relation("AcknowledgedBy", fields: [acknowledgedBy], references: [id])
+  resUser        User?               @relation("ResolvedBy", fields: [resolvedBy], references: [id])
+  source         String?
+  injured        Int?
+  lanes          String?
+  avgSpeedKmh    Int?
+  eta            String?
+  events         IncidentEvent[]
+  responders     IncidentResponder[]
+  feedEvents     FeedEvent[]
+
+  @@index([status, reportedAt(sort: Desc)])
+  @@index([districtCode])
+  @@index([type])
+}
+
+model IncidentEvent {
+  id         String            @id @default(uuid()) @db.Uuid
+  incidentId String
+  incident   Incident          @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  kind       IncidentEventKind
+  comment    String?
+  actorId    String?           @db.Uuid
+  actor      User?             @relation(fields: [actorId], references: [id])
+  at         DateTime          @default(now())
+
+  @@index([incidentId, at])
+}
+
+model Responder {
+  code  String              @id
+  label String
+  kind  ResponderKind
+  links IncidentResponder[]
+}
+
+model IncidentResponder {
+  id            String          @id @default(uuid()) @db.Uuid
+  incidentId    String
+  responderCode String
+  incident      Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  responder     Responder       @relation(fields: [responderCode], references: [code])
+  status        ResponderStatus @default(IDLE)
+  eta           String?
+
+  @@unique([incidentId, responderCode])
+}
+
+model Camera {
+  code         String    @id
+  label        String
+  districtCode String?
+  district     District? @relation(fields: [districtCode], references: [code])
+  lat          Float
+  lng          Float
+  online       Boolean   @default(true)
+  rtspUrl      String?
+
+  @@index([districtCode])
+}
+
+model FeedEvent {
+  id         Int       @id @default(autoincrement())
+  ts         DateTime  @default(now())
+  tag        FeedTag
+  incidentId String?
+  incident   Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  message    String
+  meta       String?
+
+  @@index([ts(sort: Desc)])
+}
+
+model KpiSnapshot {
+  id              Int       @id @default(autoincrement())
+  ts              DateTime  @default(now())
+  score           Float
+  activeIncidents Int
+  avgSpeedKmh     Float
+  camerasOnline   Int
+  timeOfDay       TimeOfDay @default(DAY)
+
+  @@index([ts(sort: Desc)])
+}
+
+model JamSegment {
+  id           Int      @id @default(autoincrement())
+  ts           DateTime @default(now())
+  districtCode String
+  district     District @relation(fields: [districtCode], references: [code])
+  avgScore     Float
+
+  @@index([districtCode, ts(sort: Desc)])
+}

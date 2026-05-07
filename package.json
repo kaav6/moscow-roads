@@ -1,0 +1,21 @@
+{
+  "name": "moscow-roads",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@9.12.0",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @moscow-roads/api start:dev",
+    "dev:web": "pnpm --filter @moscow-roads/web dev",
+    "build": "pnpm --filter @moscow-roads/api build && pnpm --filter @moscow-roads/web build",
+    "build:api": "pnpm --filter @moscow-roads/api build",
+    "build:web": "pnpm --filter @moscow-roads/web build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "lint": "pnpm -r --parallel lint",
+    "db:migrate": "pnpm --filter @moscow-roads/api prisma migrate deploy",
+    "db:seed": "pnpm --filter @moscow-roads/api db:seed"
+  }
+}

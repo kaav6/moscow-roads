@@ -1,0 +1,12 @@
+{
+  "user": {
+    "id": "demo-user",
+    "email": "demo@moscow-roads.local",
+    "fullName": "Демо-пользователь",
+    "shift": "14:00-22:00",
+    "roles": ["dispatcher", "operator", "viewer"],
+    "createdAt": "2026-05-07T12:00:00.000Z"
+  },
+  "accessToken": "demo-access-token",
+  "expiresAt": "2099-12-31T23:59:59.000Z"
+}
