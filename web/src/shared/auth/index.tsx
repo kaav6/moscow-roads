@@ -87,3 +87,7 @@ export function useAuth() {
 export function getToken(): string | null {
   return localStorage.getItem(STORAGE_KEY);
 }
+
+export function clearToken(): void {
+  localStorage.removeItem(STORAGE_KEY);
+}

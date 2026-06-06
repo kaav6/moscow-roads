@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { IncidentDto } from '../shared/types';
+import { Incident } from '../shared/model/Incident';
 
 declare global {
   interface Window {
@@ -25,14 +26,6 @@ function loadYmaps(): Promise<any> {
   });
   return loaderPromise;
 }
-
-const COLOR_BY_TYPE: Record<string, string> = {
-  accident: '#DC2626',
-  works: '#F59E0B',
-  closure: '#7C3AED',
-  camera: '#2563EB',
-  weather: '#0E9A95',
-};
 
 interface Props {
   incidents: IncidentDto[];
@@ -85,21 +78,21 @@ export function MoscowMap({ incidents, selectedId, onSelect, showTraffic }: Prop
     for (const inc of incidents) {
       seen.add(inc.id);
       const existing = placemarksRef.current.get(inc.id);
-      const color = COLOR_BY_TYPE[inc.type] ?? '#1A4FBA';
+      const model = new Incident(inc);
       if (existing) {
-        existing.geometry.setCoordinates([inc.lat, inc.lng]);
+        existing.geometry.setCoordinates(model.coords);
         continue;
       }
       const pm = new window.ymaps.Placemark(
-        [inc.lat, inc.lng],
+        model.coords,
         {
           balloonContentHeader: inc.title,
           balloonContentBody: inc.address,
           hintContent: inc.title,
         },
         {
-          preset: 'islands#circleIcon',
-          iconColor: color,
+          preset: model.iconPreset(),
+          iconColor: model.iconColor(),
         },
       );
       pm.events.add('click', () => onSelectRef.current?.(inc.id));
